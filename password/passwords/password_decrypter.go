@@ -18,5 +18,4 @@ func (decrypter *PasswordDecrypter) GetDecryptedPassword() (string, error) {
 		return "", nil
 	}
 	return string(decrypted), err
-
 }

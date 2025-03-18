@@ -29,12 +29,3 @@ func (c *CryptoCurrencies) ShowListings() {
 		}
 	}
 }
-
-func (c *CryptoCurrencies) FindByOfferingCode(assetId string) *CryptoCurrency {
-	for _, cryptoCurrency := range c.currencies {
-		if cryptoCurrency.AssetId == assetId {
-			return &cryptoCurrency
-		}
-	}
-	return nil
-}

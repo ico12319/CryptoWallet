@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"net/http"
 	"password/apiKey"
 	"password/cryptoCurrency"
@@ -8,7 +9,7 @@ import (
 )
 
 func main() {
-	req, err := http.NewRequest("GET", apiKey.ASSET_ENDPOINT, nil)
+	req, err := http.NewRequest("GET", apiKey.ASSET_ENDPOINT+"/BTC", nil)
 	if err != nil {
 		panic(err)
 	}
@@ -18,19 +19,19 @@ func main() {
 	client := &http.Client{}
 	resp, err := client.Do(req)
 
-	curr, err := cryptoCurrency.NewCryptoCurrencies(resp)
+	curr, err := cryptoCurrency.NewCryptoCurrency(resp)
 	if err != nil {
 		panic(err)
 	}
 	//curr.ShowListings()
 
-	user := users.NewUser("chica", "salam", 100)
-	err = user.Buy("DOGE", curr, 100)
-	if err != nil {
-		panic(err)
-	}
-
+	user := users.NewUser("salamenko", "ivanski04", 100_000)
+	user.Buy(1.2, curr)
+	user.PrintBalance()
 	user.ShowUserAssets()
-
+	fmt.Println()
+	user.Sell(1, curr)
+	user.PrintBalance()
+	user.ShowUserAssets()
 
 }
