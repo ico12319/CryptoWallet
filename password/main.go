@@ -1,15 +1,13 @@
 package main
 
 import (
-	"fmt"
 	"net/http"
 	"password/apiKey"
 	"password/cryptoCurrency"
-	"password/users"
 )
 
 func main() {
-	req, err := http.NewRequest("GET", apiKey.ASSET_ENDPOINT+"/BTC", nil)
+	req, err := http.NewRequest("GET", apiKey.ASSET_ENDPOINT+"/ETH", nil)
 	if err != nil {
 		panic(err)
 	}
@@ -23,15 +21,16 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	//curr.ShowListings()
+	curr.ShowListing()
 
-	user := users.NewUser("salamenko", "ivanski04", 100_000)
-	user.Buy(1.2, curr)
-	user.PrintBalance()
-	user.ShowUserAssets()
-	fmt.Println()
-	user.Sell(1, curr)
-	user.PrintBalance()
-	user.ShowUserAssets()
+	//user := users.NewUser("arbanasenko", "ivanski04", 100_000)
+	//cache := priceCache.GetInstance()
+	//user.Buy(1, curr, cache)
+	//priceUpdate := apiCaller.NewApiCallerForSingleAsset(curr.AssetId, cache)
+	//user.GetWalletOverallSummary(priceUpdate)
 
+	//time.Sleep(time.Minute)
+
+	//user.GetWalletOverallSummary(priceUpdate)
+	
 }

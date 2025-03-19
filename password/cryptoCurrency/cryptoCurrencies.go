@@ -7,7 +7,8 @@ import (
 )
 
 type CryptoCurrencies struct {
-	currencies []CryptoCurrency
+	currencies   []CryptoCurrency
+	tokensMapped map[string]*CryptoCurrency
 }
 
 func NewCryptoCurrencies(resp *http.Response) (*CryptoCurrencies, error) {
@@ -19,7 +20,11 @@ func NewCryptoCurrencies(resp *http.Response) (*CryptoCurrencies, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &CryptoCurrencies{currencies: cryptoCurr}, nil
+	tempMap := make(map[string]*CryptoCurrency)
+	for _, token := range cryptoCurr {
+		tempMap[token.AssetId] = &token
+	}
+	return &CryptoCurrencies{currencies: cryptoCurr, tokensMapped: tempMap}, nil
 }
 
 func (c *CryptoCurrencies) ShowListings() {
@@ -28,4 +33,8 @@ func (c *CryptoCurrencies) ShowListings() {
 			cryptoAsset.ShowListing()
 		}
 	}
+}
+
+func (c *CryptoCurrencies) GetMappedTokens() map[string]*CryptoCurrency {
+	return c.tokensMapped
 }

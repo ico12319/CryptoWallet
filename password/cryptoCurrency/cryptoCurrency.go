@@ -15,7 +15,7 @@ type CryptoCurrency struct {
 
 func NewCryptoCurrency(resp *http.Response) (*CryptoCurrency, error) {
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("not ok http status code %s\n", resp.StatusCode)
+		return nil, fmt.Errorf("not ok http status code %v\n", resp.StatusCode)
 	}
 	var token []CryptoCurrency
 	err := json.NewDecoder(resp.Body).Decode(&token)
