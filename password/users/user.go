@@ -1,11 +1,9 @@
 package users
 
 import (
-	"bufio"
 	"fmt"
 	"password/apiCaller"
 	"password/cryptoCurrency"
-	"password/passwords"
 	"password/priceCache"
 )
 
@@ -23,24 +21,9 @@ func NewUser(username string, password string, wallet float64) *User {
 	return &User{username: username, password: password, wallet: wallet, cryptoHoldings: tempMap, cryptoPurchasePrices: tempMap2}
 }
 
-func (user *User) WriteUserToFile(writer *bufio.Writer, hasher *passwords.PasswordHasher) (string, error) {
-	_, err := writer.WriteString(user.username + "\n")
-	if err != nil {
-		return "", err
-	}
-	hashedPassword, err := hasher.HashPassword(user.password)
-	if err != nil {
-		return "", err
-	}
-	_, err = writer.WriteString(hashedPassword + "\n")
-	if err != nil {
-		return "", err
-	}
-	return hashedPassword, writer.Flush()
-}
-
 func (user *User) DepositMoney(amount float64) {
 	user.wallet += amount
+	fmt.Printf("You have successfully deposited %0.2f$\n", amount)
 }
 
 func (user *User) updateWallet(amount float64) {
@@ -86,7 +69,7 @@ func (user *User) Sell(amount float64, token *cryptoCurrency.CryptoCurrency, cac
 	if token == nil {
 		return fmt.Errorf("invalid asset id %s\n", token.AssetId)
 	}
-	currAmount, contained := user.cryptoHoldings[token.Name]
+	currAmount, contained := user.cryptoHoldings[token.AssetId]
 	if !contained {
 		return fmt.Errorf("you don't own a crypto token with such asset id %s\n", token.AssetId)
 	}
@@ -145,4 +128,8 @@ func (user *User) GetWalletOverallSummary(priceUpdater *apiCaller.ApiCaller) {
 
 func (user *User) GetPassword() string {
 	return user.password
+}
+
+func (user *User) GetBalance() {
+	fmt.Printf("Your current balance is %0.2f$\n", user.wallet)
 }
