@@ -1,36 +1,49 @@
 package main
 
 import (
-	"net/http"
-	"password/apiKey"
-	"password/cryptoCurrency"
+	"bufio"
+	"database/sql"
+	"fmt"
+	_ "github.com/mattn/go-sqlite3"
+	"os"
+	"password/constants"
+	"password/factories"
+	"password/passwords"
+	"password/users"
+	"strings"
 )
 
 func main() {
-	req, err := http.NewRequest("GET", apiKey.ASSET_ENDPOINT+"/ETH", nil)
+	db, err := sql.Open("sqlite3", "mydb.db")
 	if err != nil {
 		panic(err)
 	}
 
-	req.Header.Set("X-CoinAPI-Key", apiKey.API_KEY)
+	defer db.Close()
 
-	client := &http.Client{}
-	resp, err := client.Do(req)
+	createStatement := `
+CREATE TABLE IF NOT EXISTS users (
+		username TEXT PRIMARY KEY,
+		hashed_password TEXT
+	)`
 
-	curr, err := cryptoCurrency.NewCryptoCurrency(resp)
+	_, err = db.Exec(createStatement)
+
 	if err != nil {
 		panic(err)
 	}
-	curr.ShowListing()
 
-	//user := users.NewUser("arbanasenko", "ivanski04", 100_000)
-	//cache := priceCache.GetInstance()
-	//user.Buy(1, curr, cache)
-	//priceUpdate := apiCaller.NewApiCallerForSingleAsset(curr.AssetId, cache)
-	//user.GetWalletOverallSummary(priceUpdate)
+	userDb := users.GetInstance(db)
+	hasher := passwords.NewPasswordHasher(10)
+	verifer := passwords.NewPasswordVerifier()
 
-	//time.Sleep(time.Minute)
+	reader := bufio.NewReader(os.Stdin)
+	userName, _ := reader.ReadString('\n')
+	userName = strings.TrimSpace(userName)
 
-	//user.GetWalletOverallSummary(priceUpdate)
-	
+	password, _ := reader.ReadString('\n')
+	password = strings.TrimSpace(password)
+
+	command := factories.CraftUserCredentialsCommand(constants.LOGN_COMMAND, userName, password, verifer, hasher)
+	fmt.Println(command.HandleCommand(userDb))
 }

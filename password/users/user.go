@@ -2,7 +2,6 @@ package users
 
 import (
 	"bufio"
-	"encoding/base64"
 	"fmt"
 	"password/apiCaller"
 	"password/cryptoCurrency"
@@ -24,25 +23,20 @@ func NewUser(username string, password string, wallet float64) *User {
 	return &User{username: username, password: password, wallet: wallet, cryptoHoldings: tempMap, cryptoPurchasePrices: tempMap2}
 }
 
-func (user *User) WriteUserToFile(writer *bufio.Writer) error {
-	encrypter, err := passwords.NewPasswordEncrypter()
+func (user *User) WriteUserToFile(writer *bufio.Writer, hasher *passwords.PasswordHasher) (string, error) {
+	_, err := writer.WriteString(user.username + "\n")
 	if err != nil {
-		return err
+		return "", err
 	}
-	_, err = writer.WriteString(user.username + "\n")
+	hashedPassword, err := hasher.HashPassword(user.password)
 	if err != nil {
-		return err
+		return "", err
 	}
-	encryptedPassword, err := encrypter.EncryptPassword(user.password)
+	_, err = writer.WriteString(hashedPassword + "\n")
 	if err != nil {
-		return err
+		return "", err
 	}
-	encodedPassword := base64.StdEncoding.EncodeToString(encryptedPassword) //converts binary data into a readable text
-	_, err = writer.WriteString(encodedPassword + "\n")
-	if err != nil {
-		return err
-	}
-	return writer.Flush()
+	return hashedPassword, writer.Flush()
 }
 
 func (user *User) DepositMoney(amount float64) {
@@ -57,9 +51,11 @@ func (user *User) Buy(amount float64, token *cryptoCurrency.CryptoCurrency, cach
 	if token == nil {
 		return fmt.Errorf("invalid asset id %s\n", token.AssetId)
 	}
+
 	if token.IsCrypto != 1 {
 		return fmt.Errorf("the selected type is not a crypto")
 	}
+
 	if token.Price > user.wallet || token.Price*amount > user.wallet {
 		return fmt.Errorf("the user does nto have enough balance to purchase the desired coin")
 	}
@@ -71,7 +67,6 @@ func (user *User) Buy(amount float64, token *cryptoCurrency.CryptoCurrency, cach
 	existingQuantity, exists := user.cryptoHoldings[token.AssetId]
 
 	if exists {
-		// Изчисляваме новата средна цена, ако токенът вече е закупен
 		currentAvgPrice := user.cryptoPurchasePrices[token.AssetId]
 		totalCost := currentAvgPrice * existingQuantity
 		newTotalCost := token.Price * amount
@@ -81,7 +76,6 @@ func (user *User) Buy(amount float64, token *cryptoCurrency.CryptoCurrency, cach
 		user.cryptoHoldings[token.AssetId] = newQuantity
 		user.cryptoPurchasePrices[token.AssetId] = newAvgPrice
 	} else {
-		// Ако това е първата покупка, записваме директно стойностите
 		user.cryptoHoldings[token.AssetId] = amount
 		user.cryptoPurchasePrices[token.AssetId] = token.Price
 	}
@@ -142,5 +136,13 @@ func (user *User) GetWalletOverallSummary(priceUpdater *apiCaller.ApiCaller) {
 		fmt.Printf("Asset id %s: quantity %0.2f: purchase price %0.2f: current price %0.2f\n", assetId, quantity, purchasePrice, cachedPrice)
 	}
 
-	fmt.Printf("Overral profit/loss: %0.2f\n", overallProfitLoss)
+	if overallProfitLoss > 0 {
+		fmt.Printf("Congratulations you made some profit! You have earned %0.2f\n", overallProfitLoss)
+		return
+	}
+	fmt.Printf("You are loosing money! You have lost %0.2f\n", overallProfitLoss)
+}
+
+func (user *User) GetPassword() string {
+	return user.password
 }

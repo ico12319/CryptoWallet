@@ -1,39 +1,47 @@
 package users
 
 import (
-	"bufio"
-	"fmt"
+	"database/sql"
+	"password/passwords"
+	"sync"
 )
 
+// Users Database is implemented using a singleton design pattern
 type Users struct {
-	users map[string]*User
+	dataBase *sql.DB
 }
 
-func NewUserDatabase() *Users {
-	tempUsers := make(map[string]*User)
-	return &Users{users: tempUsers}
+var instance *Users
+var once sync.Once
+
+func GetInstance(dataBase *sql.DB) *Users {
+	once.Do(func() {
+		instance = &Users{dataBase: dataBase}
+	})
+	return instance
 }
 
-func (u *Users) RegisterNewUser(userName string, password string, writer *bufio.Writer) error {
-	newlyRegisteredUser := NewUser(userName, password, 0)
-	err := newlyRegisteredUser.WriteUserToFile(writer)
+func (u *Users) RegisterNewUser(userName string, password string, hasher *passwords.PasswordHasher) error {
+	hashedPassword, err := hasher.HashPassword(password)
 	if err != nil {
 		return err
 	}
-	u.users[userName] = newlyRegisteredUser
+	insertStatement := `INSERT INTO users(username, hashed_password) VALUES(?, ?)`
+	_, err = u.dataBase.Exec(insertStatement, userName, hashedPassword)
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
-func (u *Users) ShowRegisteredUsers() {
-	for _, user := range u.users {
-		fmt.Printf("username: %s\n", user.username)
+func (u *Users) ContainsUser(userName string, password string, verifier *passwords.PasswordVerifier) bool {
+	var hashedPassword string
+	selectStatement := `SELECT hashed_password FROM users WHERE username = ? LIMIT 1`
+	err := u.dataBase.QueryRow(selectStatement, userName).Scan(&hashedPassword)
+	if err != nil {
+		return false
 	}
-}
 
-func (u *Users) ContainsUser(userName string) *User {
-	user, contained := u.users[userName]
-	if !contained {
-		return nil
-	}
-	return user
+	arePasswordMatching := verifier.VerifyPassword(hashedPassword, password)
+	return arePasswordMatching
 }
