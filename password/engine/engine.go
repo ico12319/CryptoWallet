@@ -7,6 +7,7 @@ import (
 	"password/factories"
 	"password/helpers"
 	"password/passwords"
+	"password/priceCache"
 	"password/runner"
 	"password/users"
 )
@@ -25,7 +26,7 @@ func (engine *Engine) Start(reader *bufio.Reader) error {
 	defer sqlDatabase.Close()
 
 	usersDatabase := users.GetInstance(sqlDatabase)
-	//cachedPrices := priceCache.GetInstance()
+	cachedPrices := priceCache.GetInstance()
 
 	helpers.ShowWelcomeMessage()
 	var command runner.Command
@@ -72,12 +73,12 @@ func (engine *Engine) Start(reader *bufio.Reader) error {
 		if err != nil {
 			return err
 		}
-
-		if userOption == constants.ADD_FUNDS_OPTION {
-			amountToAdd := helpers.ReadAndParseAmount(reader)
-			loggedUser.DepositMoney(amountToAdd)
-			fmt.Printf("Congratulations you have successfully added %0.2f\n$", amountToAdd)
+		if userOption == constants.EXIT_OPTION {
+			break
 		}
+
+		commandObject, err := factories.CraftUserCommand(userOption, cachedPrices, reader)
+		commandObject.HandleUserCommand(loggedUser)
 	}
 	return nil
 }
