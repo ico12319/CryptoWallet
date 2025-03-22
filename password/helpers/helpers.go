@@ -17,8 +17,10 @@ func OpenDatabase() (*sql.DB, error) {
 }
 
 func ShowWelcomeMessage() {
-	fmt.Println("Welcome to Crypto.com!")
-	fmt.Println("Do you have an account?")
+	fmt.Println("======================================")
+	fmt.Println("       WELCOME TO CRYPTO.COM!         ")
+	fmt.Println("======================================")
+	fmt.Println("Do you have an account? [yes/no]")
 }
 
 func SelectOption(reader *bufio.Reader) (string, error) {
@@ -31,6 +33,9 @@ func SelectOption(reader *bufio.Reader) (string, error) {
 }
 
 func PrintLoggedUserOptions() {
+	fmt.Println("\n======================================")
+	fmt.Println("     MAIN MENU - SELECT AN OPTION     ")
+	fmt.Println("======================================")
 	fmt.Println("1. Add funds")
 	fmt.Println("2. Buy crypto token")
 	fmt.Println("3. Sell crypto token")
@@ -46,4 +51,12 @@ func ReadAndParseAmount(reader *bufio.Reader) float64 {
 	amount = strings.TrimSpace(amount)
 	amountFloat, _ := strconv.ParseFloat(amount, 64)
 	return amountFloat
+}
+
+func HandleBuySellCommand(reader *bufio.Reader) (string, float64) {
+	fmt.Print("Enter assetId: ")
+	assetId, _ := reader.ReadString('\n')
+	assetId = strings.TrimSpace(assetId)
+	parsedAmount := ReadAndParseAmount(reader)
+	return assetId, parsedAmount
 }

@@ -3,6 +3,7 @@ package engine
 import (
 	"bufio"
 	"fmt"
+	"password/apiCaller"
 	"password/constants"
 	"password/factories"
 	"password/helpers"
@@ -27,7 +28,6 @@ func (engine *Engine) Start(reader *bufio.Reader) error {
 
 	usersDatabase := users.GetInstance(sqlDatabase)
 	cachedPrices := priceCache.GetInstance()
-
 	helpers.ShowWelcomeMessage()
 	var command runner.Command
 
@@ -57,10 +57,10 @@ func (engine *Engine) Start(reader *bufio.Reader) error {
 			command = factories.CraftUserCredentialsCommand(constants.REGISTER_COMMAND, userName, password, passwordVerifier, passwordHasher)
 		}
 		if command.HandleCommand(usersDatabase) {
-			fmt.Printf("Welcome crypto king %s\n", userName)
+			fmt.Printf("Welcome, crypto king %s!\n\n", userName)
 			break
 		} else {
-			fmt.Println("Sorry there has been an error trying to process you request! Please try again!")
+			fmt.Println("Sorry, there was an error processing your request. Please try again!")
 			continue
 		}
 	}
@@ -76,9 +76,26 @@ func (engine *Engine) Start(reader *bufio.Reader) error {
 		if userOption == constants.EXIT_OPTION {
 			break
 		}
-
-		commandObject, err := factories.CraftUserCommand(userOption, cachedPrices, reader)
-		commandObject.HandleUserCommand(loggedUser)
+		if userOption == constants.BUY_TOKEN_OPTION || userOption == constants.SELL_TOKEN_OPTION {
+			assetId, amount := helpers.HandleBuySellCommand(reader)
+			updater := apiCaller.NewApiCallerForSingleAsset(assetId, cachedPrices)
+			action, err := factories.CraftActionWithTokenCommand(userOption, assetId, amount, cachedPrices, updater)
+			if err != nil {
+				fmt.Printf("%s\n", err)
+				continue
+			}
+			action.HandleActionWithToken(loggedUser)
+		} else if userOption == constants.ADD_FUNDS_OPTION {
+			parsedAmount := helpers.ReadAndParseAmount(reader)
+			loggedUser.DepositMoney(parsedAmount)
+		} else if userOption == constants.SHOW_PORTFOLIO_OPTION {
+			loggedUser.GetWalletSummary()
+		} else if userOption == constants.SHOW_CURRENT_BALANCE_OPTION {
+			balance := loggedUser.GetBalance()
+			fmt.Printf("Your current balance is %0.2f\n", balance)
+		} else if userOption == constants.SHOW_WALLET_OVERVIEW {
+			loggedUser.GetWalletOverallSummary(cachedPrices)
+		}
 	}
 	return nil
 }

@@ -8,8 +8,8 @@ import (
 )
 
 func main() {
-	eng := engine.NewEngine()
 	reader := bufio.NewReader(os.Stdin)
+	eng := engine.NewEngine()
 	eng.Start(reader)
 
 }

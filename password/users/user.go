@@ -3,7 +3,6 @@ package users
 import (
 	"fmt"
 	"password/apiCaller"
-	"password/cryptoCurrency"
 	"password/priceCache"
 )
 
@@ -30,62 +29,56 @@ func (user *User) updateWallet(amount float64) {
 	user.wallet += amount
 }
 
-func (user *User) Buy(amount float64, token *cryptoCurrency.CryptoCurrency, cache *priceCache.PriceCache) error {
-	if token == nil {
-		return fmt.Errorf("invalid asset id %s\n", token.AssetId)
+func (user *User) Buy(assetId string, amount float64, cache *priceCache.PriceCache, update *apiCaller.ApiCaller) error {
+	tokenPrice, isPriceFresh := cache.GetPrice(assetId)
+	if !isPriceFresh {
+		update.UpdatePrice()
+		tokenPrice, _ = cache.GetPrice(assetId)
 	}
 
-	if token.IsCrypto != 1 {
-		return fmt.Errorf("the selected type is not a crypto")
-	}
-
-	if token.Price > user.wallet || token.Price*amount > user.wallet {
+	if tokenPrice > user.wallet || tokenPrice*amount > user.wallet {
 		return fmt.Errorf("the user does nto have enough balance to purchase the desired coin")
 	}
-	_, ok := cache.GetPrice(token.AssetId)
-	if !ok {
-		cache.SetPrice(token.AssetId, token.Price)
-	}
-	user.updateWallet(-(token.Price * amount))
-	existingQuantity, exists := user.cryptoHoldings[token.AssetId]
+
+	user.updateWallet(-(tokenPrice * amount))
+	existingQuantity, exists := user.cryptoHoldings[assetId]
 
 	if exists {
-		currentAvgPrice := user.cryptoPurchasePrices[token.AssetId]
+		currentAvgPrice := user.cryptoPurchasePrices[assetId]
 		totalCost := currentAvgPrice * existingQuantity
-		newTotalCost := token.Price * amount
+		newTotalCost := tokenPrice * amount
 		newQuantity := existingQuantity + amount
 		newAvgPrice := (totalCost + newTotalCost) / newQuantity
 
-		user.cryptoHoldings[token.AssetId] = newQuantity
-		user.cryptoPurchasePrices[token.AssetId] = newAvgPrice
+		user.cryptoHoldings[assetId] = newQuantity
+		user.cryptoPurchasePrices[assetId] = newAvgPrice
 	} else {
-		user.cryptoHoldings[token.AssetId] = amount
-		user.cryptoPurchasePrices[token.AssetId] = token.Price
+		user.cryptoHoldings[assetId] = amount
+		user.cryptoPurchasePrices[assetId] = tokenPrice
 	}
 	return nil
 }
 
-func (user *User) Sell(amount float64, token *cryptoCurrency.CryptoCurrency, cache *priceCache.PriceCache) error {
-	if token == nil {
-		return fmt.Errorf("invalid asset id %s\n", token.AssetId)
-	}
-	currAmount, contained := user.cryptoHoldings[token.AssetId]
+func (user *User) Sell(assetId string, amount float64, cache *priceCache.PriceCache, updater *apiCaller.ApiCaller) error {
+	currAmount, contained := user.cryptoHoldings[assetId]
 	if !contained {
-		return fmt.Errorf("you don't own a crypto token with such asset id %s\n", token.AssetId)
+		return fmt.Errorf("you don't own a crypto token with such asset id %s\n", assetId)
 	}
 	updatedAmount := currAmount - amount
 	if updatedAmount < 0 {
 		return fmt.Errorf("you currently only have %f\n", currAmount)
 	}
-	_, ok := cache.GetPrice(token.AssetId)
-	if !ok {
-		cache.SetPrice(token.AssetId, token.Price)
+	tokenPrice, isPriceFresh := cache.GetPrice(assetId)
+	if !isPriceFresh {
+		updater.UpdatePrice()
+		tokenPrice, _ = cache.GetPrice(assetId)
 	}
 	if updatedAmount == 0 {
-		delete(user.cryptoHoldings, token.AssetId)
+		delete(user.cryptoHoldings, assetId)
+	} else {
+		user.cryptoHoldings[assetId] = updatedAmount
 	}
-	user.cryptoHoldings[token.AssetId] = updatedAmount
-	user.updateWallet(token.Price * amount)
+	user.updateWallet(tokenPrice * amount)
 	return nil
 }
 
@@ -101,13 +94,14 @@ func (user *User) GetCryptoHoldings() map[string]float64 {
 	return user.cryptoHoldings
 }
 
-func (user *User) GetWalletOverallSummary(priceUpdater *apiCaller.ApiCaller) {
+func (user *User) GetWalletOverallSummary(cacher *priceCache.PriceCache) {
 	overallProfitLoss := 0.0
 	for assetId, quantity := range user.cryptoHoldings {
-		cachedPrice, ok := priceUpdater.GetCache().GetPrice(assetId)
+		cachedPrice, ok := cacher.GetPrice(assetId)
 		if !ok {
+			priceUpdater := apiCaller.NewApiCallerForSingleAsset(assetId, cacher)
 			priceUpdater.UpdatePrice()
-			cachedPrice, _ = priceUpdater.GetCache().GetPrice(assetId)
+			cachedPrice, _ = cacher.GetPrice(assetId)
 		}
 		purchasePrice, exist := user.cryptoPurchasePrices[assetId]
 		if !exist {
@@ -130,6 +124,6 @@ func (user *User) GetPassword() string {
 	return user.password
 }
 
-func (user *User) GetBalance() {
-	fmt.Printf("Your current balance is %0.2f$\n", user.wallet)
+func (user *User) GetBalance() float64 {
+	return user.wallet
 }
