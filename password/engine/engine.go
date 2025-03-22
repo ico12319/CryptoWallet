@@ -19,15 +19,8 @@ func NewEngine() *Engine {
 	return &Engine{}
 }
 
-func (engine *Engine) Start(reader *bufio.Reader) error {
-	sqlDatabase, err := helpers.OpenDatabase()
-	if err != nil {
-		return err
-	}
-	defer sqlDatabase.Close()
+func (engine *Engine) Start(usersDatabase users.UserRepository, cachedPrices *priceCache.PriceCache, reader *bufio.Reader) error {
 
-	usersDatabase := users.GetInstance(sqlDatabase)
-	cachedPrices := priceCache.GetInstance()
 	helpers.ShowWelcomeMessage()
 	var command runner.Command
 
@@ -35,34 +28,34 @@ func (engine *Engine) Start(reader *bufio.Reader) error {
 	passwordVerifier := passwords.NewPasswordVerifier()
 	var userName string
 	var password string
+	var option string
 
 	for {
-		option, err := helpers.SelectOption(reader)
-		if err != nil {
-			return err
-		}
+		helpers.ValidateYesNoCommand(&option, reader)
 		fmt.Print("Enter username: ")
-		userName, err = helpers.SelectOption(reader)
+		userName, err := helpers.SelectOption(reader)
 		if err != nil {
-			return err
+			fmt.Printf("%s\n", err)
+			continue
 		}
 		fmt.Print("Enter password: ")
 		password, err = helpers.SelectOption(reader)
 		if err != nil {
-			return err
+			fmt.Println("Invalid credentials!")
+			continue
 		}
 		if option == constants.YES_OPTION {
 			command = factories.CraftUserCredentialsCommand(constants.LOGN_COMMAND, userName, password, passwordVerifier, passwordHasher)
 		} else if option == constants.NO_OPTION {
 			command = factories.CraftUserCredentialsCommand(constants.REGISTER_COMMAND, userName, password, passwordVerifier, passwordHasher)
 		}
-		if command.HandleCommand(usersDatabase) {
-			fmt.Printf("Welcome, crypto king %s!\n\n", userName)
-			break
-		} else {
-			fmt.Println("Sorry, there was an error processing your request. Please try again!")
+		err = command.HandleCommand(usersDatabase)
+		if err != nil {
+			fmt.Printf("%s\n", err)
 			continue
 		}
+		fmt.Printf("Welcome to crypto.com %s\n", userName)
+		break
 	}
 	loggedUser := users.NewUser(userName, password, 0)
 
@@ -71,20 +64,25 @@ func (engine *Engine) Start(reader *bufio.Reader) error {
 		fmt.Print("Select option: ")
 		userOption, err := helpers.SelectOption(reader)
 		if err != nil {
-			return err
+			fmt.Printf("%s\n", err)
+			continue
 		}
 		if userOption == constants.EXIT_OPTION {
 			break
 		}
 		if userOption == constants.BUY_TOKEN_OPTION || userOption == constants.SELL_TOKEN_OPTION {
 			assetId, amount := helpers.HandleBuySellCommand(reader)
-			updater := apiCaller.NewApiCallerForSingleAsset(assetId, cachedPrices)
+			updater := apiCaller.NewApiCaller(assetId, cachedPrices)
 			action, err := factories.CraftActionWithTokenCommand(userOption, assetId, amount, cachedPrices, updater)
 			if err != nil {
 				fmt.Printf("%s\n", err)
 				continue
 			}
-			action.HandleActionWithToken(loggedUser)
+			err = action.HandleActionWithToken(loggedUser)
+			if err != nil {
+				fmt.Printf("%s\n", err)
+				continue
+			}
 		} else if userOption == constants.ADD_FUNDS_OPTION {
 			parsedAmount := helpers.ReadAndParseAmount(reader)
 			loggedUser.DepositMoney(parsedAmount)
@@ -95,6 +93,11 @@ func (engine *Engine) Start(reader *bufio.Reader) error {
 			fmt.Printf("Your current balance is %0.2f\n", balance)
 		} else if userOption == constants.SHOW_WALLET_OVERVIEW {
 			loggedUser.GetWalletOverallSummary(cachedPrices)
+		} else if userOption == constants.SHOW_AVAILBLE_TOKENS {
+			updater := apiCaller.NewApiCaller("", cachedPrices)
+			updater.UpdatePrices()
+			listedTokens := updater.GetTokens()
+			listedTokens.ShowListings()
 		}
 	}
 	return nil

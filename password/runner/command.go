@@ -5,5 +5,5 @@ import (
 )
 
 type Command interface {
-	HandleCommand(database *users.Users) bool
+	HandleCommand(database users.UserRepository) error
 }

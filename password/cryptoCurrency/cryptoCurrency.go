@@ -28,5 +28,5 @@ func NewCryptoCurrency(resp *http.Response) (*CryptoCurrency, error) {
 func (c *CryptoCurrency) ShowListing() {
 	fmt.Printf("Asset id: %s\n", c.AssetId)
 	fmt.Printf("Name: %s\n", c.Name)
-	fmt.Printf("Price: %f\n", c.Price)
+	fmt.Printf("Price: %0.15f\n", c.Price)
 }

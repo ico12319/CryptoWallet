@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"database/sql"
 	"fmt"
+	"password/constants"
 	"strconv"
 	"strings"
 )
@@ -42,7 +43,8 @@ func PrintLoggedUserOptions() {
 	fmt.Println("4. Show portfolio")
 	fmt.Println("5. Show current balance")
 	fmt.Println("6. Show wallet overview")
-	fmt.Println("7. Exit")
+	fmt.Println("7. Show available tokens")
+	fmt.Println("8. Exit")
 }
 
 func ReadAndParseAmount(reader *bufio.Reader) float64 {
@@ -59,4 +61,19 @@ func HandleBuySellCommand(reader *bufio.Reader) (string, float64) {
 	assetId = strings.TrimSpace(assetId)
 	parsedAmount := ReadAndParseAmount(reader)
 	return assetId, parsedAmount
+}
+
+func ValidateOutput(pattern string, pattern2 string) bool {
+	return pattern == pattern2
+}
+
+func ValidateYesNoCommand(option *string, reader *bufio.Reader) {
+	for {
+		*option, _ = SelectOption(reader)
+		if !ValidateOutput(*option, constants.NO_OPTION) && !ValidateOutput(*option, constants.YES_OPTION) {
+			fmt.Println("Invalid option!")
+			continue
+		}
+		break
+	}
 }

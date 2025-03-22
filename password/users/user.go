@@ -29,7 +29,7 @@ func (user *User) updateWallet(amount float64) {
 	user.wallet += amount
 }
 
-func (user *User) Buy(assetId string, amount float64, cache *priceCache.PriceCache, update *apiCaller.ApiCaller) error {
+func (user *User) Buy(assetId string, amount float64, cache *priceCache.PriceCache, update apiCaller.PriceFetcher) error {
 	tokenPrice, isPriceFresh := cache.GetPrice(assetId)
 	if !isPriceFresh {
 		update.UpdatePrice()
@@ -37,7 +37,7 @@ func (user *User) Buy(assetId string, amount float64, cache *priceCache.PriceCac
 	}
 
 	if tokenPrice > user.wallet || tokenPrice*amount > user.wallet {
-		return fmt.Errorf("the user does nto have enough balance to purchase the desired coin")
+		return fmt.Errorf("not enough balance to purchase the desired coin\n")
 	}
 
 	user.updateWallet(-(tokenPrice * amount))
@@ -59,15 +59,18 @@ func (user *User) Buy(assetId string, amount float64, cache *priceCache.PriceCac
 	return nil
 }
 
-func (user *User) Sell(assetId string, amount float64, cache *priceCache.PriceCache, updater *apiCaller.ApiCaller) error {
+func (user *User) Sell(assetId string, amount float64, cache *priceCache.PriceCache, updater apiCaller.PriceFetcher) error {
 	currAmount, contained := user.cryptoHoldings[assetId]
 	if !contained {
-		return fmt.Errorf("you don't own a crypto token with such asset id %s\n", assetId)
+		return fmt.Errorf("you don't own a crypto token with such asset id\n")
 	}
+
 	updatedAmount := currAmount - amount
+
 	if updatedAmount < 0 {
 		return fmt.Errorf("you currently only have %f\n", currAmount)
 	}
+
 	tokenPrice, isPriceFresh := cache.GetPrice(assetId)
 	if !isPriceFresh {
 		updater.UpdatePrice()
@@ -99,13 +102,13 @@ func (user *User) GetWalletOverallSummary(cacher *priceCache.PriceCache) {
 	for assetId, quantity := range user.cryptoHoldings {
 		cachedPrice, ok := cacher.GetPrice(assetId)
 		if !ok {
-			priceUpdater := apiCaller.NewApiCallerForSingleAsset(assetId, cacher)
+			priceUpdater := apiCaller.NewApiCaller(assetId, cacher)
 			priceUpdater.UpdatePrice()
 			cachedPrice, _ = cacher.GetPrice(assetId)
 		}
 		purchasePrice, exist := user.cryptoPurchasePrices[assetId]
 		if !exist {
-			fmt.Printf("Няма информация за покупната цена на актив с assetId: %s\n", assetId)
+			fmt.Printf("There is not information about the price of a token with assetId: %s\n", assetId)
 			continue
 		}
 		profitLoss := (cachedPrice - purchasePrice) * quantity
@@ -116,12 +119,9 @@ func (user *User) GetWalletOverallSummary(cacher *priceCache.PriceCache) {
 	if overallProfitLoss > 0 {
 		fmt.Printf("Congratulations you made some profit! You have earned %0.2f\n", overallProfitLoss)
 		return
+	} else if overallProfitLoss < 0 {
+		fmt.Printf("You are loosing money! You have lost %0.2f\n", overallProfitLoss)
 	}
-	fmt.Printf("You are loosing money! You have lost %0.2f\n", overallProfitLoss)
-}
-
-func (user *User) GetPassword() string {
-	return user.password
 }
 
 func (user *User) GetBalance() float64 {

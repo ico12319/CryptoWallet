@@ -15,9 +15,6 @@ func NewRegisterCommand(userName string, password string, hasher *passwords.Pass
 	return &RegisterCommand{userName: userName, password: password, hasher: hasher}
 }
 
-func (regsiter *RegisterCommand) HandleCommand(dataBase *users.Users) bool {
-	if dataBase.RegisterNewUser(regsiter.userName, regsiter.password, regsiter.hasher) != nil {
-		return false
-	}
-	return true
+func (regsiter *RegisterCommand) HandleCommand(dataBase users.UserRepository) error {
+	return dataBase.RegisterUser(regsiter.userName, regsiter.password, regsiter.hasher)
 }

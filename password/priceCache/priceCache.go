@@ -10,6 +10,7 @@ import (
 type PriceCache struct {
 	prices   map[string]PriceInfo
 	duration time.Duration
+	mutex    sync.Mutex // only one goroutine can read and write
 }
 
 var instance *PriceCache
@@ -20,6 +21,8 @@ func newPriceCache(duration time.Duration) *PriceCache {
 }
 
 func (pc *PriceCache) GetPrice(assetId string) (float64, bool) {
+	pc.mutex.Lock()
+	defer pc.mutex.Unlock()
 	pInfo, exist := pc.prices[assetId]
 	if !exist || time.Since(pInfo.timeStamp) > pc.duration {
 		return 0, false
@@ -28,12 +31,14 @@ func (pc *PriceCache) GetPrice(assetId string) (float64, bool) {
 }
 
 func (pc *PriceCache) SetPrice(assetId string, price float64) {
+	pc.mutex.Lock()
+	defer pc.mutex.Unlock()
 	pc.prices[assetId] = PriceInfo{price: price, timeStamp: time.Now()}
 }
 
 func GetInstance() *PriceCache {
 	once.Do(func() {
-		instance = newPriceCache(time.Minute)
+		instance = newPriceCache(5 * time.Minute)
 	})
 	return instance
 }
