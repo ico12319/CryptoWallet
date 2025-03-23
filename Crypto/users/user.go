@@ -22,7 +22,6 @@ func NewUser(username string, password string, wallet float64) *User {
 
 func (user *User) DepositMoney(amount float64) {
 	user.wallet += amount
-	fmt.Printf("You have successfully deposited %0.2f$\n", amount)
 }
 
 func (user *User) updateWallet(amount float64) {
@@ -120,7 +119,7 @@ func (user *User) GetWalletOverallSummary(cacher *priceCache.PriceCache) {
 		fmt.Printf("Congratulations you made some profit! You have earned %0.2f\n", overallProfitLoss)
 		return
 	} else if overallProfitLoss < 0 {
-		fmt.Printf("You are loosing money! You have lost %0.2f\n", overallProfitLoss)
+		fmt.Printf("You are loosing money! You have lost %0.2f$\n", overallProfitLoss)
 	}
 }
 

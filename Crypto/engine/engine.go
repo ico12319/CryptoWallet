@@ -4,12 +4,12 @@ import (
 	"bufio"
 	"fmt"
 	"password/apiCaller"
+	"password/commands"
 	"password/constants"
 	"password/factories"
 	"password/helpers"
 	"password/passwords"
 	"password/priceCache"
-	"password/runner"
 	"password/users"
 )
 
@@ -22,7 +22,7 @@ func NewEngine() *Engine {
 func (engine *Engine) Start(usersDatabase users.UserRepository, cachedPrices *priceCache.PriceCache, reader *bufio.Reader) error {
 
 	helpers.ShowWelcomeMessage()
-	var command runner.Command
+	var command commands.Command
 
 	passwordHasher := passwords.NewPasswordHasher(10) // default value
 	passwordVerifier := passwords.NewPasswordVerifier()
@@ -85,14 +85,14 @@ func (engine *Engine) Start(usersDatabase users.UserRepository, cachedPrices *pr
 			}
 		} else if userOption == constants.ADD_FUNDS_OPTION {
 			parsedAmount := helpers.ReadAndParseAmount(reader)
-			loggedUser.DepositMoney(parsedAmount)
-		} else if userOption == constants.SHOW_PORTFOLIO_OPTION {
-			loggedUser.GetWalletSummary()
-		} else if userOption == constants.SHOW_CURRENT_BALANCE_OPTION {
-			balance := loggedUser.GetBalance()
-			fmt.Printf("Your current balance is %0.2f\n", balance)
+			walletChangingCommand, _ := factories.CraftUserWalletChangingCommand(userOption)
+			walletChangingCommand.UpdateWallet(loggedUser, parsedAmount)
+		} else if userOption == constants.SHOW_PORTFOLIO_OPTION || userOption == constants.SHOW_CURRENT_BALANCE_OPTION {
+			readOnlyCommand, _ := factories.CraftUserReadOnlyCommand(userOption)
+			readOnlyCommand.GetSummary(loggedUser)
 		} else if userOption == constants.SHOW_WALLET_OVERVIEW {
-			loggedUser.GetWalletOverallSummary(cachedPrices)
+			cacheNeededCommand, _ := factories.CraftUserCacheNeededCommand(userOption)
+			cacheNeededCommand.GetSummaryUsingCache(loggedUser, cachedPrices)
 		} else if userOption == constants.SHOW_AVAILBLE_TOKENS {
 			updater := apiCaller.NewApiCaller("", cachedPrices)
 			updater.UpdatePrices()

@@ -37,19 +37,17 @@ func (aCaller *ApiCaller) UpdatePrice() error {
 	client := &http.Client{}
 	resp, err := client.Do(req)
 
+	if err != nil {
+		return err
+	}
+
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("not ok status code %d\n", resp.StatusCode)
 	}
 
 	defer resp.Body.Close()
 
-	if err != nil {
-		return err
-	}
 	token, err := cryptoCurrency.NewCryptoCurrency(resp)
-	if err != nil {
-		return err
-	}
 	if err != nil {
 		return err
 	}
