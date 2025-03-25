@@ -35,7 +35,7 @@ func (u *Users) RegisterUser(userName string, password string, hasher *passwords
 	insertStatement := `INSERT INTO users(username, hashed_password) VALUES(?, ?)`
 	_, err = u.dataBase.Exec(insertStatement, userName, hashedPassword)
 	if err != nil {
-		return err
+		return fmt.Errorf("user with username %s is aready registered!\n", userName)
 	}
 	return nil
 }
