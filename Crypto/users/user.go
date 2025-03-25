@@ -67,7 +67,7 @@ func (user *User) Sell(assetId string, amount float64, cache *priceCache.PriceCa
 	updatedAmount := currAmount - amount
 
 	if updatedAmount < 0 {
-		return fmt.Errorf("you currently only have %f\n", currAmount)
+		return fmt.Errorf("you currently only have %0.2f\n", currAmount)
 	}
 
 	tokenPrice, isPriceFresh := cache.GetPrice(assetId)
@@ -112,11 +112,11 @@ func (user *User) GetWalletOverallSummary(cacher *priceCache.PriceCache) {
 		}
 		profitLoss := (cachedPrice - purchasePrice) * quantity
 		overallProfitLoss += profitLoss
-		fmt.Printf("Asset id %s: quantity %0.2f: purchase price %0.2f: current price %0.2f\n", assetId, quantity, purchasePrice, cachedPrice)
+		fmt.Printf("Asset id %s: quantity %0.2f: purchase price %0.2f: current price %0.2f$\n", assetId, quantity, purchasePrice, cachedPrice)
 	}
 
 	if overallProfitLoss > 0 {
-		fmt.Printf("Congratulations you made some profit! You have earned %0.2f\n", overallProfitLoss)
+		fmt.Printf("Congratulations you made some profit! You have earned %0.2f$\n", overallProfitLoss)
 		return
 	} else if overallProfitLoss < 0 {
 		fmt.Printf("You are loosing money! You have lost %0.2f$\n", overallProfitLoss)

@@ -12,7 +12,7 @@ type ApiCaller struct {
 	apiKey string
 	url    string
 	cache  *priceCache.PriceCache
-	tokens *cryptoCurrency.CryptoCurrencies
+	tokens cryptoCurrency.CryptoCurrencies
 }
 
 func formatUrl(assetId string) string {
@@ -47,7 +47,7 @@ func (aCaller *ApiCaller) UpdatePrice() error {
 
 	defer resp.Body.Close()
 
-	token, err := cryptoCurrency.NewCryptoCurrency(resp)
+	token, err := cryptoCurrency.NewHttpCryptoCurrency(resp)
 	if err != nil {
 		return err
 	}
@@ -76,13 +76,13 @@ func (aCaller *ApiCaller) UpdatePrices() error {
 	if err != nil {
 		return err
 	}
-	aCaller.tokens, err = cryptoCurrency.NewCryptoCurrencies(resp)
+	aCaller.tokens, err = cryptoCurrency.NewHttpCryptoCurrencies(resp)
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func (aCaller *ApiCaller) GetTokens() *cryptoCurrency.CryptoCurrencies {
+func (aCaller *ApiCaller) GetTokens() cryptoCurrency.CryptoCurrencies {
 	return aCaller.tokens
 }
